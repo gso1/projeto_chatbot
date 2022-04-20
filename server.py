@@ -1,19 +1,19 @@
 import socket
 
-serverPorta = 6000
+serverPort = 6000
 serverIP = '' #localhost
 
-serverSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-serverID = (serverIP,serverPorta)
+serverID = (serverIP, serverPort)
 
 serverSocket.bind(serverID)
 
+print(f'Listenning on port {serverPort}')
 while True:
 
-    recveivedMessageBytes,clientAdress = serverSocket.recvfrom(248)
+    rcvMsgBytes, clientAdress = serverSocket.recvfrom(248)
 
-    recveivedMessage = recveivedMessageBytes.decode()
+    rcvMsg = rcvMsgBytes.decode()
 
-    print("mensagem recebida:")
-    print(recveivedMessage)
+    print(f'Message received {rcvMsg}')

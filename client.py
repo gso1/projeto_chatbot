@@ -1,15 +1,14 @@
 import socket
 
-serverPorta = 6000
-serverIP = '192.168.15.160'
+serverPort = 6000
+serverIP = 'localhost'
 
-clientSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-serverID = (serverIP,serverPorta)
+serverID = (serverIP, serverPort)
 
+message = input("Type a message:")
 
-message = input("inputa ai:")
-
-clientSocket.sendto(message.encode(),serverID)
+clientSocket.sendto(message.encode(), serverID)
 
 clientSocket.close()
