@@ -1,4 +1,5 @@
 import socket
+from random import random
 
 class rdt_connection:
     
@@ -6,14 +7,18 @@ class rdt_connection:
 
     def __init__(self, port, ip='localhost', type='client', buffer_size=248):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.address = (ip, port)
+        self.server_addr = (ip, port)
         self.buffer_size = buffer_size
+        self.type = type
         if type == 'server':
             print(f'Server listening on port {port}')
-            self.sock.bind(self.address)
+            self.sock.bind(self.server_addr)
     
-    def udt_send(self, msg):
-        return self.sock.sendto(msg, self.address)
+    def udt_send(self, msg, addr=None):
+        if addr == None:
+            addr = self.server_addr
+
+        return self.sock.sendto(msg, addr)
     
     def udt_rcv(self):
         return self.sock.recvfrom(self.buffer_size)
@@ -21,23 +26,48 @@ class rdt_connection:
     def rdt_send(self, msg):
         pkt = self.make_pkt(msg)
         self.seq_num += 1
-        self.udt_send(pkt.encode())
-    
-    def rdt_rcv(self):
-        
-        bytes, sender_addr = self.udt_rcv(248)
+        pktsnd = pkt.encode()
+        self.sock.settimeout(1)
+        self.udt_send(pktsnd)
+
+        ack = 0
+        while not ack:
+            try:
+                pktrcv, _ = self.rdt_rcv()
+                if not pktrcv['ack']:
+                    self.udt_send(pktsnd)
+            except socket.timeout as err:
+                print('timeout error')
+                self.udt_send(pktsnd)
+                self.sock.settimeout(1)
+            else:
+                self.sock.settimeout(None)
+                ack = 1
+                    
+    def rdt_rcv(self, type='sender'):
+        bytes, sender_addr = self.udt_rcv()
         pkt = eval(bytes.decode())
+        p = random()
+        corrupt = self.corrupt(pkt)
+        if type == 'receiver' and corrupt:
+            pkt['ack'] = 0
+
+        if type == 'receiver':
+            self.udt_send(str(pkt).encode(), addr=sender_addr)
+        
         return pkt, sender_addr
 
-    def make_pkt(self, msg):
-        return str({'data': msg})
+    def make_pkt(self, msg, ack=1):
+        return str({'ack': ack , 'seq': self.seq_num, 'sum': self.checksum(msg.encode()), 'data': msg})
+
+    def corrupt(self, pkt):
+        return pkt['sum'] != self.checksum(pkt['data'].encode())
 
     def checksum(self, data):
         #RFC 1071
         addr = 0 
         # Copute Internet Checksum for "count" bytes, begining at location "addr"
         Sum = 0
-        
         count = len(data)
         while (count > 1):
             # inner loop

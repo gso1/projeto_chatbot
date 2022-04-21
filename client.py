@@ -1,5 +1,8 @@
 import socket
 
+from rdt import rdt_connection
+
+'''
 serverPort = 6000
 serverIP = 'localhost'
 
@@ -12,3 +15,14 @@ message = input("Type a message:")
 clientSocket.sendto(message.encode(), serverID)
 
 clientSocket.close()
+'''
+
+client = rdt_connection(6000)
+
+while True:
+    try:
+        msg = input('Type message: ')
+        client.rdt_send(msg)
+    except KeyboardInterrupt:
+        client.close_connection()
+        break
