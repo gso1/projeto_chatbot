@@ -22,12 +22,6 @@ class rdt_connection:
         pkt = self.make_pkt(self.seq_num, msg)
         self.seq_num += 1
         self.udt_send(pkt.encode())
-
-        #agora espera por ack
-        ack = False
-        while not self.ack:
-            pkt, _ = self.rdt_rcv()
-            
     
     def rdt_rcv(self):
         
