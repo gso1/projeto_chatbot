@@ -19,7 +19,7 @@ class rdt_connection:
         return self.sock.recvfrom(self.buffer_size)
 
     def rdt_send(self, msg):
-        pkt = self.make_pkt(self.seq_num, msg)
+        pkt = self.make_pkt(msg)
         self.seq_num += 1
         self.udt_send(pkt.encode())
     
