@@ -29,8 +29,8 @@ class rdt_connection:
         pkt = eval(bytes.decode())
         return pkt, sender_addr
 
-    def make_pkt(self, seq_num, msg):
-        return str({'seq_num': seq_num, 'sum': self.checksum(msg) ,'data': msg})
+    def make_pkt(self, msg):
+        return str({'data': msg})
 
     def checksum(self, data):
         #RFC 1071
