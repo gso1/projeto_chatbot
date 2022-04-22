@@ -1,4 +1,5 @@
 import socket
+
 from random import random
 
 class rdt_connection:
@@ -73,10 +74,12 @@ class rdt_connection:
         return pkt['sum'] != self.checksum(pkt['data'].encode())
 
     def checksum(self, data):
+
         #RFC 1071
         addr = 0 
         # Copute Internet Checksum for "count" bytes, begining at location "addr"
         Sum = 0
+
         count = len(data)
         while (count > 1):
             # inner loop
@@ -95,6 +98,8 @@ class rdt_connection:
         checksum = ~Sum
         return checksum
 
+
     def close_connection(self):
         print('Closing socket')
         self.sock.close()
+
