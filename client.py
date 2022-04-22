@@ -1,5 +1,3 @@
-import socket
-
 from rdt import rdt_connection
 
 '''
@@ -13,9 +11,8 @@ serverID = (serverIP, serverPort)
 message = input("Type a message:")
 
 clientSocket.sendto(message.encode(), serverID)
-
-clientSocket.close()
 '''
+
 
 client = rdt_connection(6000)
 
