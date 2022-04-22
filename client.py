@@ -2,7 +2,9 @@ import socket
 import json 
 from rdt import rdtConnection
 
+
 class data:
+
 
     def __init__(self,seq,checksum,message,timeout):
         self.seq = seq
@@ -24,3 +26,16 @@ while True:
 
 
 
+
+clientSocket.close()
+'''
+
+client = rdt_connection(6000)
+
+while True:
+    try:
+        msg = input('Type message: ')
+        client.rdt_send(msg)
+    except KeyboardInterrupt:
+        client.close_connection()
+        break

@@ -1,68 +1,70 @@
 import socket
-import json
-from types import new_class
 
-from checksum import checksum
+from random import random
 
-class rdtConnection:
+class rdt_connection:
+    
+    seq_num = 1
 
-    seqNumber = 0
-
-    def __init__(self, ip: str, port: int, type: str = "client") -> socket.socket:
+    def __init__(self, port, ip='localhost', type='client', buffer_size=248):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.address = (ip, port)
+        self.server_addr = (ip, port)
+        self.buffer_size = buffer_size
         self.type = type
-        if type == "server":
-            print(f'server listening on {port}')
-            self.sock.bind(self.address)
-            
-    def send(self, pkt: dict[str,int]) -> int:
-        return self.sock.sendto(pkt.encode(), self.address)
+        if type == 'server':
+            print(f'Server listening on port {port}')
+            self.sock.bind(self.server_addr)
+    
+    def udt_send(self, msg, addr=None):
+        if addr == None:
+            addr = self.server_addr
 
-    def rdtSend(self, msg: str) ->None:
+        return self.sock.sendto(msg, addr)
+    
+    def udt_rcv(self):
+        return self.sock.recvfrom(self.buffer_size)
+
+    def rdt_send(self, msg):
+        pkt = self.make_pkt(msg)
+        self.seq_num += 1
+        pktsnd = pkt.encode()
         self.sock.settimeout(1)
-        sndpkt = self.make_pkt(msg)
-        self.send(self, sndpkt)
-        response = False
-        while not response:
+        self.udt_send(pktsnd)
+
+        ack = 0
+        while not ack:
             try:
-                rcvpkt = self.rdtReceive()
-                self.sock.settimeout(None)
+                pktrcv, _ = self.rdt_rcv()
+                if not pktrcv['ack']:
+                    self.udt_send(pktsnd)
             except socket.timeout as err:
-                print('timeout')
-            
-            if self.corrupt(rcvpkt, sndpkt) or self.isACK(rcvpkt, 1):
-                print('ok')
-                response = True
-    
-    def isCorrupt(self, rcvpkt, sndpkt):
-        return rcvpkt['checkSum'] == sndpkt['checkSum']:
+                print('timeout error')
+                self.udt_send(pktsnd)
+                self.sock.settimeout(1)
+            else:
+                self.sock.settimeout(None)
+                ack = 1
+                    
+    def rdt_rcv(self, type='sender'):
+        bytes, sender_addr = self.udt_rcv()
+        pkt = eval(bytes.decode())
+        p = random()
+        corrupt = self.corrupt(pkt)
+        if type == 'receiver' and corrupt:
+            pkt['ack'] = 0
 
-    def isACK(self, rcvpkt, ack):
-        print("opa")
+        if type == 'receiver':
+            self.udt_send(str(pkt).encode(), addr=sender_addr)
         
-    def make_pkt(self, msg: str) -> dict[str,int]:
-        checkSum = self.checkSum(msg)
-        dic = {'ack': 0,'seq': self.seqNum,'checkSum': checkSum, 'msg' : msg}
+        return pkt, sender_addr
 
-        return dic
+    def make_pkt(self, msg, ack=1):
+        return str({'ack': ack , 'seq': self.seq_num, 'sum': self.checksum(msg.encode()), 'data': msg})
 
-    def rdtReceive(self):
-        rcvMsgBytes, serverAdress = self.sock.recvfrom(248)
-        rcvMsg = rcvMsgBytes.decode()
-       
-       
-        return self.receive(rcvMsg)
-        
-    def receive(self,rcvMsg:str) -> str:
-        #sendACK
-        return rcvMsg
-    
-    def sendAck(self):
-        return self.seqNumber
+    def corrupt(self, pkt):
+        return pkt['sum'] != self.checksum(pkt['data'].encode())
 
-    def checkSum(self, data: str) -> int:
-        print("checa o checksum")
+    def checksum(self, data):
 
         #RFC 1071
         addr = 0 
@@ -70,7 +72,6 @@ class rdtConnection:
         Sum = 0
 
         count = len(data)
-
         while (count > 1):
             # inner loop
             Sum += data[addr] << 8 + data[addr+1]  # index do byte 
@@ -88,4 +89,8 @@ class rdtConnection:
         checksum = ~Sum
         return checksum
 
+
+    def close_connection(self):
+        print('Closing socket')
+        self.sock.close()
 
