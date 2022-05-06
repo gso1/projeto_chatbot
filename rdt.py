@@ -4,7 +4,7 @@ from random import random
 
 class rdt_connection:
 
-    def __init__(self, port, ip='localhost', type='client', buffer_size=248):
+    def __init__(self, port, ip='localhost', type='client', buffer_size=4096):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server_addr = (ip, port)
         self.buffer_size = buffer_size
@@ -23,18 +23,23 @@ class rdt_connection:
     def udt_rcv(self):
         return self.sock.recvfrom(self.buffer_size)
 
-    def rdt_send(self, msg):
+    def rdt_send(self, msg, addr=None):
+        if addr == None:
+            addr = self.server_addr
+
         sum = self.checksum(msg.encode())
         pkt = self.make_pkt(msg, sum)
         pktsnd = pkt.encode()
         self.sock.settimeout(1)
-        self.udt_send(pktsnd)
+        self.udt_send(pktsnd, addr)
 
         ack = 0
         while not ack:
             try:
-                pktrcv, _ = self.rdt_rcv()
-                if pktrcv['sum'] != sum or pktrcv['ack'] != self.seq_num:
+                pktrcv, addr = self.rdt_rcv()
+               
+                
+                if pktrcv['sum'] != sum or not pktrcv.__contains__('ack') or pktrcv['ack'] != self.seq_num:
                     continue
             except socket.timeout as err:
                 print('timeout error')
@@ -64,8 +69,8 @@ class rdt_connection:
         
         return (pkt, sender_addr) if isvalid else (None, None)
 
-    def make_pkt(self, msg, checksum, ack=1):
-        return str({'seq': self.seq_num, 'sum': checksum, 'data': msg})
+    def make_pkt(self, msg, checksum, ack=1,addr = 6000):
+        return str({'seq': self.seq_num, 'sum': checksum, 'data': msg ,'addr':addr})
 
     def make_ack(self, checksum, ack=1):
         return {'ack': ack, 'sum': checksum}
