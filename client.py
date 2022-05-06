@@ -26,11 +26,11 @@ onde:
 userName ='cliente'
 
 state = 0
-print(f'<{time.localtime().tm_hour}:{time.localtime().tm_min}>')
+
 while True:
     try:
         if state%2 == 0:
-            msg = input(f'{time.localtime().tm_hour} : {time.localtime().tm_min} {userName} :')
+            msg = input(f'<{time.localtime().tm_hour} : {time.localtime().tm_min} {userName}> :')
             print('antes')
             client.rdt_send(msg)
             
@@ -39,7 +39,7 @@ while True:
         if state%2 == 1:
              pkt, address = client.rdt_rcv(type='receiver')
              msg = pkt['data']
-             print(f'{time.localtime().tm_hour}:{time.localtime().tm_min} Cintofome :{msg}')
+             print(f'<{time.localtime().tm_hour}:{time.localtime().tm_min} Cintofome> :{msg}')
              state = state +1
 
     except KeyboardInterrupt:

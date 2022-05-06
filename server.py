@@ -90,9 +90,51 @@ def isOption(option):
         return True
     
     return False
+def handleMenu(client_addr):
+    server.rdt_send(menu, client_addr)
+    
+    client_addr2 = 'abacate'
+    option = None
+    while client_addr2 != client_addr:
+        pkt, client_addr2 = server.rdt_rcv(type='receiver')
+        if client_addr2 != client_addr:
+            requests.append([pkt, client_addr2])
+
+    handleOptions(option,client_addr)
+
+def handleOrder(client_addr):
+    msg = 'Digite qual o primeiro item que gostaria (número ou por extenso)'
+    server.rdt_send(msg, client_addr)
+    
+    client_addr2 = 'abacate'
+    option = None
+    while client_addr2 != client_addr:
+        pkt, client_addr2 = server.rdt_rcv(type='receiver')
+        if client_addr2 != client_addr:
+            requests.append([pkt, client_addr2])
+       
+    
+    handleOptions(option,client_addr)
+
 
 def handleOptions(option, client_addr):
     print("testando")
+
+    if option == '1'or option =='cardapio':
+        handleMenu(client_addr)
+        print('test')
+    elif option == '2' or option =='pedir':
+        print('test')
+    elif option == '3' or option =='conta individual':
+        print('test')
+    elif option == '4' or option =='nao fecho com robo,chame seu gerente':
+        print('test')
+    elif option == '5' or option =='nada nao, tava so testando':
+        print('test')
+    elif option == '6' or option =='conta da mesa':
+        print('test')
+    else:
+        print('escolher opcao válida')
 
 def giveOptions(client_addr):
     server.rdt_send(options, client_addr)
@@ -105,7 +147,8 @@ def giveOptions(client_addr):
             requests.append([pkt, client_addr2])
         elif isOption(pkt['data']):
             option = pkt['data']
-    
+        
+    option = pkt['data']
     handleOptions(option, client_addr)
     
     
