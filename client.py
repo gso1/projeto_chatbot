@@ -30,7 +30,7 @@ state = 0
 while True:
     try:
         if state%2 == 0:
-            msg = input(f'<{time.localtime().tm_hour} : {time.localtime().tm_min} {userName}> :')
+            msg = input(f'<{time.localtime().tm_hour}:{time.localtime().tm_min} {userName}> :')
             print('antes')
             client.rdt_send(msg)
             
@@ -40,6 +40,8 @@ while True:
              pkt, address = client.rdt_rcv(type='receiver')
              msg = pkt['data']
              print(f'<{time.localtime().tm_hour}:{time.localtime().tm_min} Cintofome> :{msg}')
+             if msg == 'É pra já!':
+                 continue
              state = state +1
 
     except KeyboardInterrupt:

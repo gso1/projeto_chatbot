@@ -2,6 +2,26 @@ from http import client
 from rdt import*
 from collections import namedtuple
 from rdt import rdt_connection
+
+class ClientData:
+
+    def __init__(self,id, mesa, socket):
+
+        self.id = id
+        self.mesa = mesa
+        self.conta_individual = 0
+        self.socket = socket
+        self.pedidos = []
+
+    def printData(self):
+        
+        print(f'id : {self.id}')
+        print(f'mesa : {self.mesa}')
+        print(f'conta_individual : {self.conta_individual}')
+        print(f'socket : {self.socket}')
+        print(f'pedidos : {self.pedidos}')
+       
+
 '''
 serverPort = 6000
 serverIP = '' #localhost
@@ -48,7 +68,7 @@ Products = {
 server = rdt_connection(6000, type='server')
 
 table = []
-ClientData = namedtuple('ClientData','id mesa conta_individual socket pedidos') 
+ 
 
 sample_msg = "mensagem de resposta"
 
@@ -70,40 +90,49 @@ def clientLogin(client_addr):
             server.rdt_send('numero de mesa invalido', client_addr) 
         
     tableClient = pkt['data']
-    msg = 'Digite seu nome'
 
+    msg = 'Digite seu nome'
+    server.rdt_send(msg, client_addr)
+    client_addr2 = 'banana'
+    
     while client_addr2 != client_addr:
         pkt, client_addr2 = server.rdt_rcv(type='receiver')
         if client_addr2 != client_addr:
             requests.append([pkt, client_addr2])
         
     name = pkt['data']
-    newClient = ClientData(id= name, mesa= tableClient, conta_individual= 0, socket=client_addr, pedidos=[])
+    newClient = ClientData(id= name, mesa= tableClient, socket=client_addr)
     table.append(newClient)
 
     print('novo cliente cadastrado', newClient)
+    
 
 def isOption(option):
-    if(option in range(1,7) or option == 'um' 
+    if(option in ['1','2','3','4','5','6'] or option == 'um' 
         or option == 'dois' or option == 'tres' 
         or option == 'quatro' or option == 'cinco' or option == 'seis'):
         return True
     
     return False
+
+def isPlate(plate):
+    if(plate in Products.keys()):
+        return True
+    
+    return False
+
 def handleMenu(client_addr):
     server.rdt_send(menu, client_addr)
-    
-    client_addr2 = 'abacate'
-    option = None
-    while client_addr2 != client_addr:
-        pkt, client_addr2 = server.rdt_rcv(type='receiver')
-        if client_addr2 != client_addr:
-            requests.append([pkt, client_addr2])
+    handleOptions(client_addr)
 
-    handleOptions(option,client_addr)
+def finishOrder(client_addr):
+    msg = 'É pra já!'
+    server.rdt_send(msg, client_addr)
+    handleOptions(client_addr)
 
-def handleOrder(client_addr):
-    msg = 'Digite qual o primeiro item que gostaria (número ou por extenso)'
+
+def newOrder(client_addr):
+    msg = 'Gostaria de pedir mais algum item?(sim ou nao)'
     server.rdt_send(msg, client_addr)
     
     client_addr2 = 'abacate'
@@ -112,18 +141,76 @@ def handleOrder(client_addr):
         pkt, client_addr2 = server.rdt_rcv(type='receiver')
         if client_addr2 != client_addr:
             requests.append([pkt, client_addr2])
-       
+        elif option == 'sim':
+            print(isPlate(pkt['data']))
+            option = pkt['data']
+            handleOrder(client_addr)
+        elif option == 'nao':
+            print(isPlate(pkt['data']))
+            option = pkt['data']
+            finishOrder(client_addr)
+        else:
+            handleError(client_addr2)
+            client_addr2 = 'abacate'
+
+def addPlate(client_addr,plate):
+    print('no add plate')
+    for person in table:
+        if person.socket == client_addr:
+            print('antes append')
+            person.pedidos.append([plate,Products[plate]])
+            print('antes att conta')
+            person.conta_individual = person.conta_individual + Products[plate]
+            print('printar perso')
+            person.printData()
     
-    handleOptions(option,client_addr)
+
+def handleOrder(client_addr):
+    msg = 'Digite qual o primeiro item que gostaria (número ou por extenso)'
+    server.rdt_send(msg, client_addr)
+
+    client_addr2 = 'abacate'
+    plate = None
+    while client_addr2 != client_addr:
+        pkt, client_addr2 = server.rdt_rcv(type='receiver')
+        if client_addr2 != client_addr:
+            requests.append([pkt, client_addr2])
+        elif isPlate(pkt['data']):
+            print(isPlate(pkt['data']))
+            plate = pkt['data']
+        else:
+            handleError(client_addr2)
+            client_addr2 = 'abacate'
+
+    addPlate(client_addr,plate)
+    
+    newOrder(client_addr)
+    
 
 
-def handleOptions(option, client_addr):
-    print("testando")
+def handleOptions(client_addr):
+    print("no handle options")
+
+    option = None
+    client_addr2 = 'abacate'
+
+    while client_addr2 != client_addr:
+        pkt, client_addr2 = server.rdt_rcv(type='receiver')
+        if client_addr2 != client_addr:
+            requests.append([pkt, client_addr2])
+        
+        elif isOption(pkt['data']):
+            
+            option = pkt['data']
+        else:
+            handleError(client_addr2)
+            client_addr2 = 'abacate'
 
     if option == '1'or option =='cardapio':
         handleMenu(client_addr)
         print('test')
     elif option == '2' or option =='pedir':
+        handleOrder(client_addr)
         print('test')
     elif option == '3' or option =='conta individual':
         print('test')
@@ -134,22 +221,17 @@ def handleOptions(option, client_addr):
     elif option == '6' or option =='conta da mesa':
         print('test')
     else:
+        print(option)
         print('escolher opcao válida')
 
-def giveOptions(client_addr):
-    server.rdt_send(options, client_addr)
+def handleError(client_addr):
+    msg = 'Ocorreu um erro, digite corretamente'
+    server.rdt_send(msg, client_addr)
     
-    client_addr2 = 'abacate'
-    option = None
-    while client_addr2 != client_addr:
-        pkt, client_addr2 = server.rdt_rcv(type='receiver')
-        if client_addr2 != client_addr:
-            requests.append([pkt, client_addr2])
-        elif isOption(pkt['data']):
-            option = pkt['data']
-        
-    option = pkt['data']
-    handleOptions(option, client_addr)
+def giveOptions(client_addr):
+
+    server.rdt_send(options, client_addr)
+    handleOptions(client_addr)
     
     
     
