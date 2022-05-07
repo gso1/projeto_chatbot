@@ -37,13 +37,12 @@ class rdt_connection:
         while not ack:
             try:
                 pktrcv, _addr, _ = self.rdt_rcv()
-                print(pktrcv)
                 if pktrcv == None:
                    continue
                 if addr != _addr or pktrcv['sum'] != sum or not pktrcv.__contains__('ack') or pktrcv['ack'] != self.seq_num:
                     continue
             except socket.timeout as err:
-                print('timeout error')
+                #print('timeout error')
                 self.udt_send(pktsnd)
                 self.sock.settimeout(1)
             else:
@@ -53,6 +52,7 @@ class rdt_connection:
                     
     def rdt_rcv(self, addr=None, type='sender'):
         bytes, sender_addr = self.udt_rcv()
+        #print(addr, sender_addr)
         pkt = eval(bytes.decode())
         isvalid = True
         # p = random()
