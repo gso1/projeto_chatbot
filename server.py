@@ -226,7 +226,7 @@ def tableCount(client_addr):
             msg = msg + clientInfo(person.socket)
             total = total + person.conta_individual
 
-    msg = msg + 'Total da mesa = R$' + str(total) + ',00\n'
+    msg = msg + 'Total da mesa = R$' + str(total) + '\n'
     msg = msg + '-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-\n\n'
     
     server.rdt_send(msg, client_addr)

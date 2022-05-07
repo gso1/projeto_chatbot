@@ -17,8 +17,8 @@ end = False
 
 while True:
     try:
-        if state%2 == 0:
-            
+        if state == 0:
+            #send
             msg = input(f'<{time.localtime().tm_hour}:{time.localtime().tm_min} {userName}> :')
             client.rdt_send(msg)
 
@@ -29,10 +29,10 @@ while True:
             if msg.lower() == 'levantar':
                 end = True
 
-            state = state + 1
+            state = 1
 
-        if state%2 == 1:
-            
+        if state == 1:
+            #rcv
             pkt, address, _ = client.rdt_rcv(type='receiver')
             
             if pkt['data'] == 'Digite seu nome':
@@ -42,7 +42,7 @@ while True:
                 raise "End of client"
             msg = pkt['data']
             print(f'<{time.localtime().tm_hour}:{time.localtime().tm_min} Cintofome> :{msg}')
-            state = state +1
+            state = 0
 
     except KeyboardInterrupt:
         client.close_connection()
