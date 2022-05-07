@@ -94,9 +94,9 @@ def clientLogin(client_addr):
 
     msg = 'Digite seu nome'
     server.rdt_send(msg, client_addr)
-    client_addr2 = 'banana'
-    
-    while client_addr2 != client_addr:
+    #client_addr2 = 'banana'
+    ok = False
+    while not ok:
         pkt, client_addr2 = server.rdt_rcv(type='receiver')
         if client_addr2 != client_addr:
             requests.append([pkt, client_addr2])
@@ -402,35 +402,42 @@ def tablecount(client_addr,tableNumber):
 '''
 
 
+def foo(pkt, cliente_end):
+    server.rdt_send('opa', cliente_end)
+    pkt, end, valid = server.rdt_rcv(cliente_end, type='receiver')
+    while not valid: 
+        pkt, end, valid = server.rdt_rcv(cliente_end, type='receiver')
 
+    server.rdt_send('ok', cliente_end)
 
-while True:
-    try:
-        pkt, addr = server.rdt_rcv(type='receiver')
-        print(pkt)
+if __name__ == '__main__':
+    while True:
+        try:
+            pkt, addr, _ = server.rdt_rcv(type='receiver')
+            print(pkt)
+            foo(pkt, addr)
+            '''if pkt['data'] == 'chefia':
+                flag = 0
+                for person in table:
+                    if person.socket == addr:
+                        msg = 'Usuário já cadastrado'
+                        handleError(msg,addr)
+                        flag = 1
+                if flag == 1:
+                    continue
 
-        if pkt['data'] == 'chefia':
-            flag = 0
-            for person in table:
-                if person.socket == addr:
-                    msg = 'Usuário já cadastrado'
-                    handleError(msg,addr)
-                    flag = 1
-            if flag == 1:
-                continue
+                print('entrou chefia')
+                clientLogin(addr)
+                giveOptions(addr)
 
-            print('entrou chefia')
-            clientLogin(addr)
-            giveOptions(addr)
-
-        elif isOption(pkt['data']):
-            # responde as opcoes do cliente
-            option = pkt['data']
-            handleOptions(option,addr)
-        else :
-            msg = 'Opcao inválida'
-            handleError(msg,addr)
-            print('continua bro')
-        
-    except Exception as err:
-       print('err=', err)
+            elif isOption(pkt['data']):
+                # responde as opcoes do cliente
+                option = pkt['data']
+                handleOptions(option,addr)
+            else :
+                msg = 'Opcao inválida'
+                handleError(msg,addr)
+                print('continua bro')'''
+            
+        except Exception as err:
+            print('err=', err)

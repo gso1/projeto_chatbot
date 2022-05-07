@@ -4,7 +4,7 @@ from random import random
 
 class rdt_connection:
 
-    def __init__(self, port, ip='localhost', type='client', buffer_size=4096):
+    def __init__(self, port, ip='127.0.0.1', type='client', buffer_size=4096):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server_addr = (ip, port)
         self.buffer_size = buffer_size
@@ -36,10 +36,11 @@ class rdt_connection:
         ack = 0
         while not ack:
             try:
-                pktrcv, addr = self.rdt_rcv()
-               
-                
-                if pktrcv['sum'] != sum or not pktrcv.__contains__('ack') or pktrcv['ack'] != self.seq_num:
+                pktrcv, _addr, _ = self.rdt_rcv()
+                print(pktrcv)
+                if pktrcv == None:
+                   continue
+                if addr != _addr or pktrcv['sum'] != sum or not pktrcv.__contains__('ack') or pktrcv['ack'] != self.seq_num:
                     continue
             except socket.timeout as err:
                 print('timeout error')
@@ -50,7 +51,7 @@ class rdt_connection:
                 ack = 1
         self.seq_num = 1 - self.seq_num
                     
-    def rdt_rcv(self, type='sender'):
+    def rdt_rcv(self, addr=None, type='sender'):
         bytes, sender_addr = self.udt_rcv()
         pkt = eval(bytes.decode())
         isvalid = True
@@ -59,16 +60,15 @@ class rdt_connection:
             sum = self.checksum(pkt['data'].encode())
             sndack = self.make_ack(sum, ack=self.seq_num)
 
-            if self.corrupt(pkt) or self.seq_num != pkt['seq']:
+            if (addr != None and addr != sender_addr) or self.corrupt(pkt) or self.seq_num != pkt['seq']:
                 sndack['ack'] = pkt['seq']
                 isvalid = False
             else:
                 self.seq_num = 1 - self.seq_num
-            
-            self.udt_send(str(sndack).encode(), addr=sender_addr)
-        
-        return (pkt, sender_addr) if isvalid else (None, None)
+                self.udt_send(str(sndack).encode(), addr=sender_addr)
 
+        return (pkt, sender_addr, isvalid) if isvalid else (None, None, isvalid)
+    
     def make_pkt(self, msg, checksum, ack=1,addr = 6000):
         return str({'seq': self.seq_num, 'sum': checksum, 'data': msg ,'addr':addr})
 

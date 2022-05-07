@@ -38,7 +38,7 @@ while True:
 
         if state%2 == 1:
              
-             pkt, address = client.rdt_rcv(type='receiver')
+             pkt, address, _ = client.rdt_rcv(type='receiver')
              msg = pkt['data']
              print(f'<{time.localtime().tm_hour}:{time.localtime().tm_min} Cintofome> :{msg}')
              state = state +1
