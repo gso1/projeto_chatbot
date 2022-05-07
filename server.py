@@ -1,3 +1,4 @@
+from gettext import find
 from http import client
 from rdt import*
 from collections import namedtuple
@@ -52,7 +53,7 @@ menu = """"
 2 - Acaraje : $15,50
 3 - Casquinha de Siri : $13,00
 4 - Torresmo: $10,00
-5 - cudecurioso: $50,00
+5 - Cudecurioso: $50,00
 6 - Bolo de rolo: $5,00
 """
 
@@ -108,9 +109,9 @@ def clientLogin(client_addr):
     
 
 def isOption(option):
-    if(option in ['1','2','3','4','5','6'] or option == 'um' 
-        or option == 'dois' or option == 'tres' 
-        or option == 'quatro' or option == 'cinco' or option == 'seis'):
+    if(option in ['1','2','3','4','5','6'] or option == 'cardapio'
+        or option == 'pedir' or option == 'conta individual' 
+        or option == 'conta da mesa' or option == 'pagar' or option == 'levantar'):
         return True
     
     return False
@@ -123,22 +124,24 @@ def isPlate(plate):
 
 def handleMenu(client_addr):
     server.rdt_send(menu, client_addr)
-    handleOptions(client_addr)
+    
 
 def finishOrder(client_addr):
     msg = 'É pra já!'
     server.rdt_send(msg, client_addr)
-    handleOptions(client_addr)
+   
 
 
 def newOrder(client_addr):
     msg = 'Gostaria de pedir mais algum item?(sim ou nao)'
     server.rdt_send(msg, client_addr)
-    
+
+    print('dentro new order')
     client_addr2 = 'abacate'
     option = None
     while client_addr2 != client_addr:
         pkt, client_addr2 = server.rdt_rcv(type='receiver')
+        option = pkt['data']
         if client_addr2 != client_addr:
             requests.append([pkt, client_addr2])
         elif option == 'sim':
@@ -150,7 +153,8 @@ def newOrder(client_addr):
             option = pkt['data']
             finishOrder(client_addr)
         else:
-            handleError(client_addr2)
+            msg = "Digite apenas 'sim' ou 'nao' " 
+            handleError(msg,client_addr2)
             client_addr2 = 'abacate'
 
 def addPlate(client_addr,plate):
@@ -179,59 +183,195 @@ def handleOrder(client_addr):
             print(isPlate(pkt['data']))
             plate = pkt['data']
         else:
-            handleError(client_addr2)
+            msg = "Digite apenas pratos que existam no menu"
+            handleError(msg,client_addr2)
             client_addr2 = 'abacate'
 
     addPlate(client_addr,plate)
     
     newOrder(client_addr)
     
+def clientInfo(client_addr):
+    print('countInfo')
+    msg = 'Default'
+    for person in table:
+        person = findClient(client_addr)
+        print('achou')
+        msg = '\n|' + person.id +'|\n'
+        print('antes for pedido')
+        for pedido in person.pedidos:
+            print(person.pedidos)
+            msg = msg + pedido[0] + ' =>R$ ' + str(pedido[1]) + '\n'
+            msg = msg + '-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-\n'
+        msg = msg + 'Total = R$' + str(person.conta_individual) + '\n'
+        msg = msg + '-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-\n\n'
+    return msg
+
+def individualCount(client_addr):
+    print('individualCount')
+    msg = 'Default'
+    msg = clientInfo(client_addr)
+    server.rdt_send(msg, client_addr)
+    
 
 
-def handleOptions(client_addr):
+def findClient(client_addr):
+    for person in table:
+        if(person.socket == client_addr):
+            return person
+    return None
+
+def tableCount(client_addr):
+    print('tableCount')
+    msg = 'Default'
+    person = findClient(client_addr)
+    numberTable = person.mesa
+    total = 0
+
+    for person in table:
+        if person.mesa == numberTable:
+            msg = msg + clientInfo(person.socket)
+            total = total + person.conta_individual
+
+    msg = msg + 'Total da mesa = R$' + str(total) + ',00\n'
+    msg = msg + '-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-\n\n'
+    
+    server.rdt_send(msg, client_addr)
+  
+
+def totalTable(client_addr):
+    person = findClient(client_addr)
+    numberTable = person.mesa
+    total = 0
+    for person in table:
+        if person.mesa == numberTable:
+            
+            total = total + person.conta_individual
+    return total
+
+    
+def pay_account(client_addr):
+    client = findClient(client_addr)
+    clientBill = client.conta_individual
+    tableBill = totalTable(client_addr)
+
+    msg = f'Sua conta foi R$ {clientBill} e a da mesa R$ {tableBill}. Digite o valor a ser pago'
+    server.rdt_send(msg, client_addr)
+    snd_addr = None
+    payment = None
+    print('antes while')
+    while snd_addr != client_addr:
+        
+        pkt, snd_addr = server.rdt_rcv(type = 'receiver')
+        print(pkt['data'])
+        print(pkt['data'].isdigit())
+        if not pkt['data'].isdigit():
+            msg = 'Escreva apenas digitos'
+            handleError(msg,client_addr)
+            snd_addr = 'banana'
+            continue
+        else:
+            payment = float(pkt['data'])
+    
+    print('pos while')
+    if payment < clientBill or payment > tableBill:
+        pay_account(client_addr)
+    elif payment == clientBill :
+        print('equal')
+        clientBill -= payment
+        client.conta_individual = 0
+    elif payment <= tableBill:
+        client.conta_individual = 0
+        rest = payment - clientBill
+        dividePayment(rest, client_addr)
+
+    msg = 'Você pagou sua conta, obrigado!'
+    print(client.conta_individual)
+    server.rdt_send(msg, client_addr)
+    print('pos send')
+
+        
+        
+def dividePayment(rest, client):
+    mesa = client.mesa
+
+    countValid = 0
+    count = 0
+    
+    for person in table:
+        if person.mesa == mesa and person.conta_individual:
+            count += 1
+    
+    if not count:
+        return False
+
+    individualPayment = rest/count
+
+    for person in table:
+        if person.mesa == mesa and person.conta_individual:
+            person.conta_individual = max(0, person.conta_individual - rest)
+    
+    return True
+            
+def clientRemove(client_addr):
+    
+    person = findClient(client_addr)
+
+    print('clientremove antes if')
+    if person.conta_individual:
+        msg = 'Você ainda não pagou sua conta'
+        handleError(msg ,client_addr)
+        return
+    
+    person = findClient(client_addr)
+    index = table.index(person)
+    table.pop(index)
+    msg = 'Volte Sempre ^^'
+    server.rdt_send(msg, client_addr)
+    
+    
+def handleOptions(option,client_addr):
     print("no handle options")
 
-    option = None
-    client_addr2 = 'abacate'
-
-    while client_addr2 != client_addr:
-        pkt, client_addr2 = server.rdt_rcv(type='receiver')
-        if client_addr2 != client_addr:
-            requests.append([pkt, client_addr2])
-        
-        elif isOption(pkt['data']):
-            
-            option = pkt['data']
-        else:
-            handleError(client_addr2)
-            client_addr2 = 'abacate'
-
-    if option == '1'or option =='cardapio':
+    if option == 'chefia':
+        print('entrou chefia')
+        clientLogin(addr)
+        giveOptions(addr)
+    elif option == '1'or option =='cardapio':
         handleMenu(client_addr)
-        print('test')
+        print('test 1')
     elif option == '2' or option =='pedir':
         handleOrder(client_addr)
-        print('test')
+        print('test 2')
     elif option == '3' or option =='conta individual':
-        print('test')
+        individualCount(client_addr)
+        print('test 3')
     elif option == '4' or option =='nao fecho com robo,chame seu gerente':
-        print('test')
+        print('test 4')
     elif option == '5' or option =='nada nao, tava so testando':
-        print('test')
+        print('test 5')
     elif option == '6' or option =='conta da mesa':
-        print('test')
+        tableCount(client_addr)
+        print('test 6')
+    elif option == 'levantar':
+        clientRemove(client_addr)
+        print('test 7')
+    elif option == 'pagar':
+        pay_account(client_addr)
+        print('test 8')
     else:
         print(option)
         print('escolher opcao válida')
 
-def handleError(client_addr):
-    msg = 'Ocorreu um erro, digite corretamente'
+def handleError(msg, client_addr):
+    msgDefault = 'Ocorreu um erro:'
+    msg = msgDefault + msg
     server.rdt_send(msg, client_addr)
-    
+
+
 def giveOptions(client_addr):
 
     server.rdt_send(options, client_addr)
-    handleOptions(client_addr)
     
     
     
@@ -270,13 +410,27 @@ while True:
         print(pkt)
 
         if pkt['data'] == 'chefia':
+            flag = 0
+            for person in table:
+                if person.socket == addr:
+                    msg = 'Usuário já cadastrado'
+                    handleError(msg,addr)
+                    flag = 1
+            if flag == 1:
+                continue
+
             print('entrou chefia')
             clientLogin(addr)
             giveOptions(addr)
-        elif pkt['data'] == 'opcao':
+
+        elif isOption(pkt['data']):
             # responde as opcoes do cliente
+            option = pkt['data']
+            handleOptions(option,addr)
+        else :
+            msg = 'Opcao inválida'
+            handleError(msg,addr)
             print('continua bro')
-        else:
-            continue
+        
     except Exception as err:
        print('err=', err)
