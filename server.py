@@ -107,7 +107,7 @@ def isOption(option):
     return False
 
 def isPlate(plate):
-    if plate in Products.keys() or int(plate) in range(1,6):
+    if (plate in Products.keys())or (plate in ['1','2','3','4','5','6']):
         return True
     return False
 
@@ -142,12 +142,13 @@ def newOrder(client_addr):
             finishOrder(client_addr)
         else:
             msg = "Digite apenas 'sim' ou 'nao' " 
-            handleError(msg,client_addr2)
-            client_addr2 = 'abacate'
+            handleError(msg,client_addr)
+            valid = False
+           
 
 def addPlate(client_addr,plate):
     print('no add plate')
-    if plate.isdigit():
+    if plate in ['1','2','3','4','5','6']:
         plate = int(plate)
         plate = list(Products.keys())[plate-1]
 
@@ -162,7 +163,7 @@ def addPlate(client_addr,plate):
     
 
 def handleOrder(client_addr):
-    msg = 'Digite qual o primeiro item que gostaria (número ou por extenso)'
+    msg = 'Digite qual o item que gostaria (número ou por extenso)'
     server.rdt_send(msg, client_addr)
 
     plate = None
@@ -179,6 +180,7 @@ def handleOrder(client_addr):
         else:
             msg = "Digite apenas pratos que existam no menu"
             handleError(msg, client_addr)
+            valid = False
 
     addPlate(client_addr,plate)
     
@@ -242,6 +244,12 @@ def totalTable(client_addr):
             total = total + person.conta_individual
     return total
 
+def check_float(potential_float):
+    try:
+        float(potential_float)
+        return True
+    except ValueError:
+        return False
     
 def pay_account(client_addr):
     client = findClient(client_addr)
@@ -261,32 +269,35 @@ def pay_account(client_addr):
         if not valid:
             continue
 
-        if not pkt['data'].isdigit():
+        if not check_float(pkt['data']):
             msg = 'Escreva apenas digitos'
             handleError(msg,client_addr)
-            continue
+            valid = 'false'
         else:
             payment = float(pkt['data'])
     
-    if payment < clientBill or payment > tableBill:
-        pay_account(client_addr)
-    elif payment == clientBill :
-        print('equal')
-        clientBill -= payment
-        client.conta_individual = 0
-    elif payment <= tableBill:
-        client.conta_individual = 0
-        rest = payment - clientBill
-        dividePayment(rest, client_addr)
+            if payment < clientBill or payment > tableBill:
+                valid = False
+                msg = f'Sua conta foi R$ {clientBill} e a da mesa R$ {tableBill}. Digite o valor a ser pago'
+                handleError(msg,client_addr)
+            elif payment == clientBill :
+                print('equal')
+                clientBill -= payment
+                client.conta_individual = 0
+            elif payment <= tableBill:
+                client.conta_individual = 0
+                rest = payment - clientBill
+                dividePayment(rest, client_addr)
 
-    client.products.clear()
+    client.pedidos.clear()
 
     msg = 'Você pagou sua conta, obrigado!'
     print(client.conta_individual)
     server.rdt_send(msg, client_addr)
    
         
-def dividePayment(rest, client):
+def dividePayment(rest, client_addr):
+    client = findClient(client_addr)
     mesa = client.mesa
 
     count = 0

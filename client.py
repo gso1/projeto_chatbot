@@ -26,9 +26,7 @@ while True:
                 userName = msg
                 nameFlag = False
             
-            if msg.lower() == 'levantar':
-                end = True
-
+            
             state = 1
 
         if state == 1:
@@ -37,12 +35,12 @@ while True:
             
             if pkt['data'] == 'Digite seu nome':
                 nameFlag = True
-
-            if end:
-                raise "End of client"
+         
             msg = pkt['data']
             print(f'<{time.localtime().tm_hour}:{time.localtime().tm_min} Cintofome> :{msg}')
             state = 0
+            if pkt['data'] == 'Volte Sempre ^^':
+                raise "End of client"
 
     except KeyboardInterrupt:
         client.close_connection()
