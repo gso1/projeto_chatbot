@@ -4,6 +4,7 @@ from rdt import*
 from collections import namedtuple
 from rdt import rdt_connection
 
+# classe que armazena os dados do cliente
 class ClientData:
 
     def __init__(self,id, mesa, socket):
@@ -22,6 +23,8 @@ class ClientData:
         print(f'socket : {self.socket}')
         print(f'pedidos : {self.pedidos}')
 
+
+# strings e dicionarios auxiliares
 
 options = """""""""
 Digite uma das opções a seguir(o número ou por extenso)
@@ -61,15 +64,16 @@ ProductsNum = {
 }
 
 
+# inicia o servidor
 server = rdt_connection(6000, type='server')
 
+# representa uma matriz de clientes no restaurante
 table = []
  
 
 sample_msg = "mensagem de resposta"
 
-requests = []
-
+# faz o login do cliente
 def clientLogin(client_addr):
     msg = 'Digite sua mesa'
     server.rdt_send(msg, client_addr)
@@ -77,6 +81,7 @@ def clientLogin(client_addr):
     valid = False
     pkt, _, valid = server.rdt_rcv(type='receiver',addr=client_addr)
     
+    # espera por uma resposta do cliente para seguir o processo
     while not valid:
         if valid and not pkt['data'].isdigit():
             server.rdt_send('numero de mesa invalido', client_addr) 
@@ -98,6 +103,7 @@ def clientLogin(client_addr):
     print('novo cliente cadastrado', newClient)
     
 
+# checa se eh uma opcao valida
 def isOption(option):
     if (option in ['1','2','3','6'] or option == 'cardapio'
         or option == 'pedir' or option == 'conta individual' 
@@ -106,27 +112,27 @@ def isOption(option):
     
     return False
 
+# checa se eh um pedido valido
 def isPlate(plate):
     if (plate in Products.keys())or (plate in ['1','2','3','4','5','6']):
         return True
     return False
 
+# envia o menu pro usuario
 def handleMenu(client_addr):
     server.rdt_send(menu, client_addr)
     
-
+# Finaliza o pedido do usuario
 def finishOrder(client_addr):
     msg = 'É pra já!'
     server.rdt_send(msg, client_addr)
    
 
-
+# faz um novo pedido
 def newOrder(client_addr):
     msg = 'Gostaria de pedir mais algum item?(sim ou nao)'
     server.rdt_send(msg, client_addr)
 
-    #print('dentro new order')
-    #client_addr2 = 'abacate'
     option = None
     valid = False
     while not valid:
@@ -145,7 +151,7 @@ def newOrder(client_addr):
             handleError(msg,client_addr)
             valid = False
            
-
+# adciona um prato no cliente
 def addPlate(client_addr,plate):
     print('no add plate')
     if plate in ['1','2','3','4','5','6']:
@@ -161,7 +167,7 @@ def addPlate(client_addr,plate):
             print('printar perso')
             person.printData()
     
-
+# recebe o pedido do cliente
 def handleOrder(client_addr):
     msg = 'Digite qual o item que gostaria (número ou por extenso)'
     server.rdt_send(msg, client_addr)
@@ -186,6 +192,7 @@ def handleOrder(client_addr):
     
     newOrder(client_addr)
     
+# Manda as informacoes do cliente
 def clientInfo(client_addr):
     print('countInfo')
     msg = 'Default'
@@ -202,6 +209,7 @@ def clientInfo(client_addr):
         msg = msg + '-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-\n\n'
     return msg
 
+# Manda a conta individual do cliente
 def individualCount(client_addr):
     print('individualCount')
     msg = 'Default'
@@ -209,13 +217,14 @@ def individualCount(client_addr):
     server.rdt_send(msg, client_addr)
     
 
-
+# Procura por cliente
 def findClient(client_addr):
     for person in table:
         if(person.socket == client_addr):
             return person
     return None
 
+# Manda a conta da mesa
 def tableCount(client_addr):
     print('tableCount')
     msg = 'Default'
@@ -233,7 +242,7 @@ def tableCount(client_addr):
     
     server.rdt_send(msg, client_addr)
   
-
+# Cacula a conta total da mesa do cliente
 def totalTable(client_addr):
     person = findClient(client_addr)
     numberTable = person.mesa
@@ -250,7 +259,8 @@ def check_float(potential_float):
         return True
     except ValueError:
         return False
-    
+
+# Faz o pagamento da conta do cliente   
 def pay_account(client_addr):
     client = findClient(client_addr)
     clientBill = client.conta_individual
@@ -295,7 +305,8 @@ def pay_account(client_addr):
     print(client.conta_individual)
     server.rdt_send(msg, client_addr)
    
-        
+
+# divide o pagamento do cliente        
 def dividePayment(rest, client_addr):
     client = findClient(client_addr)
     mesa = client.mesa
@@ -316,7 +327,8 @@ def dividePayment(rest, client_addr):
             person.conta_individual = max(0, person.conta_individual - individualPayment)
     
     return True
-            
+
+# remove o cliente    
 def clientRemove(client_addr):
     
     person = findClient(client_addr)
@@ -332,7 +344,8 @@ def clientRemove(client_addr):
     msg = 'Volte Sempre ^^'
     server.rdt_send(msg, client_addr)
     
-    
+
+# encaminha o cliente para a opcao desejada
 def handleOptions(option, client_addr):
     print("no handle options")
 
@@ -362,33 +375,6 @@ def handleError(msg, client_addr):
 def giveOptions(client_addr):
     server.rdt_send(options, client_addr)
     
-    
-    
-'''
-def tablecount(client_addr,tableNumber):
-    
-    msg = []
-    for client in table:
-        if(client.mesa == tableNumber):
-            
-    ClientData = namedtuple('ClientData','id mesa conta_individual socket pedidos') 
-    
-    server.rdt_send(msg, client_addr)
-    
-    client_addr2 = 'banana'
-    
-    while client_addr2 != client_addr:
-        pkt, client_addr2 = server.rdt_rcv(type='receiver')
-        if client_addr2 != client_addr:
-            # TODO handle diferent clients messages
-            #requests.append([pkt, client_addr2])
-            continue
-        elif not pkt['data'].isdigit():
-            server.rdt_send('numero de mesa invalido', client_addr) 
-        
-    tableClient = pkt['data']
-    msg = 'Digite seu nome'
-'''
 
 if __name__ == '__main__':
     while True:

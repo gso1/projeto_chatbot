@@ -2,7 +2,11 @@ import socket
 
 from random import random
 
+
 class rdt_connection:
+    '''
+        rdt protocol implementation
+    '''
 
     def __init__(self, port, ip='127.0.0.1', type='client', buffer_size=4096):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -14,15 +18,18 @@ class rdt_connection:
             print(f'Server listening on port {port}')
             self.sock.bind(self.server_addr)
     
+    # function to send a message to any address
     def udt_send(self, msg, addr=None):
         if addr == None:
             addr = self.server_addr
 
         return self.sock.sendto(msg, addr)
     
+    # receives message from any addresss
     def udt_rcv(self):
         return self.sock.recvfrom(self.buffer_size)
 
+    # rdt function to send a message and await for its ack
     def rdt_send(self, msg, addr=None):
         if addr == None:
             addr = self.server_addr
@@ -49,13 +56,13 @@ class rdt_connection:
                 self.sock.settimeout(None)
                 ack = 1
         self.seq_num = 1 - self.seq_num
-                    
+    
+    # receives messages from a address and sends the ack if necessary
     def rdt_rcv(self, addr=None, type='sender'):
         bytes, sender_addr = self.udt_rcv()
-        #print(addr, sender_addr)
         pkt = eval(bytes.decode())
         isvalid = True
-        # p = random()
+
         if type == 'receiver':
             sum = self.checksum(pkt['data'].encode())
             sndack = self.make_ack(sum, ack=self.seq_num)
@@ -69,15 +76,19 @@ class rdt_connection:
 
         return (pkt, sender_addr, isvalid) if isvalid else (None, None, isvalid)
     
-    def make_pkt(self, msg, checksum, ack=1,addr = 6000):
-        return str({'seq': self.seq_num, 'sum': checksum, 'data': msg ,'addr':addr})
+    # make the packet to send
+    def make_pkt(self, msg, checksum, ack=1):
+        return str({'seq': self.seq_num, 'sum': checksum, 'data': msg})
 
+    # make the ack packet as the book
     def make_ack(self, checksum, ack=1):
         return {'ack': ack, 'sum': checksum}
 
+    # check if corrupt
     def corrupt(self, pkt):
         return pkt['sum'] != self.checksum(pkt['data'].encode())
 
+    
     def checksum(self, data):
 
         #RFC 1071
